@@ -1,0 +1,15 @@
+CFIMDB before tuning
+dev acc :: 0.490
+test acc :: 0.244
+
+SST before tuning
+dev acc :: 0.225
+test acc :: 0.216
+
+CFIMDB after tuning
+dev acc :: 0.535
+test acc :: 0.371
+
+SST after tuning
+dev acc :: 0.401
+test acc :: 0.412
