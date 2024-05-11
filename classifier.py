@@ -7,6 +7,7 @@ from config import LlamaConfig
 from llama import load_pretrained
 from tokenizer import Tokenizer
 
+
 class LlamaZeroShotClassifier(torch.nn.Module):
 	def __init__(self, config: LlamaConfig, tokenizer: Tokenizer, label_names: list[str]):
 		super(LlamaZeroShotClassifier, self).__init__()
@@ -30,6 +31,7 @@ class LlamaZeroShotClassifier(torch.nn.Module):
 			label_probabilities[:, i] = total_log_prob[:, 0]
 		return label_probabilities
 
+
 class LlamaEmbeddingClassifier(torch.nn.Module):
 	def __init__(self, config):
 		super(LlamaEmbeddingClassifier, self).__init__()
@@ -45,6 +47,7 @@ class LlamaEmbeddingClassifier(torch.nn.Module):
 		self.dropout = torch.nn.Dropout(config.hidden_dropout_prob)
 		self.classifier_head = torch.nn.Linear(self.llama.config.dim, self.num_labels)
 
+
 	def forward(self, input_ids):
 		'''
 		1) Find the hidden state after the final token of the input sequence
@@ -54,5 +57,8 @@ class LlamaEmbeddingClassifier(torch.nn.Module):
 		   logits (unnormalized probabilities) over all classes.
 		3) Take the log-softmax of the logits and return log-probabilities over all classes.
 		'''
-		# todo
-		raise NotImplementedError
+		_, h = self.llama(input_ids)
+		h = self.dropout(h[:, -1])
+
+		logits = self.classifier_head(h)
+		return F.log_softmax(logits, dim=-1)

@@ -50,8 +50,7 @@ def apply_rotary_emb(
 
     _, seqlen, _, _ = query.shape
     device = query.device
-    # todo
-    #
+
     # Please refer to slide 22 in https://phontron.com/class/anlp2024/assets/slides/anlp-05-transformers.pdf
     # and Section 3 in https://arxiv.org/abs/2104.09864.
 
@@ -64,12 +63,34 @@ def apply_rotary_emb(
     # First, compute the trigonometric values in the second and fourth columns in
     # slide 22 (linked above).
 
-    # Then, combine these trigonometric values with the tensors query_real, query_imag,
-    # key_real, and key_imag.
+    thetas = torch.pow(theta, -2 * torch.arange(head_dim // 2) / head_dim).to(device)
 
-    raise NotImplementedError
+    # sines = torch.sin(torch.arange(seqlen).unsqueeze(0) * thetas.unsqueeze(1))
+    # cosines = torch.cos(torch.arange(seqlen).unsqueeze(0) * thetas.unsqueeze(1))
 
-    query_out = None
-    key_out = None
+    sines = torch.sin(thetas.unsqueeze(0) * torch.arange(seqlen).unsqueeze(1))
+    cosines = torch.cos(thetas.unsqueeze(0) * torch.arange(seqlen).unsqueeze(1))
+
+    # each (B, L, H, D)
+    query_real_rotated = torch.zeros_like(query, device=device)
+    query_imag_rotated = torch.zeros_like(query, device=device)
+    key_real_rotated = torch.zeros_like(key, device=device)
+    key_imag_rotated = torch.zeros_like(key, device=device)
+
+    query_real_rotated[..., 0::2] = query_real * cosines.unsqueeze(1)  # (L, D) -> (L, 1, D)
+    query_real_rotated[..., 1::2] = query_real * sines.unsqueeze(1)
+
+    query_imag_rotated[..., 0::2] = -query_imag * sines.unsqueeze(1)
+    query_imag_rotated[..., 1::2] = query_imag * cosines.unsqueeze(1)
+
+    key_real_rotated[..., 0::2] = key_real * cosines.unsqueeze(1)
+    key_real_rotated[..., 1::2] = key_real * sines.unsqueeze(1)
+
+    key_imag_rotated[..., 0::2] = -key_imag * sines.unsqueeze(1)
+    key_imag_rotated[..., 1::2] = key_imag * cosines.unsqueeze(1)
+
+    query_out = query_real_rotated + query_imag_rotated
+    key_out = key_real_rotated + key_imag_rotated
+
     # Return the rotary position embeddings for the query and key tensors
     return query_out, key_out
